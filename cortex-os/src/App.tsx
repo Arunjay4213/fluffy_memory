@@ -923,18 +923,38 @@ function FailureCard({
 
 // ─── Section 8: Footer with Waitlist ────────────────────────────────────────
 
+const GOOGLE_SHEETS_URL =
+  'https://script.google.com/macros/s/AKfycbzuIb5zHBtc-Y-Qs55ghMBPudpJivVrL7ihCfmbdK-LSE-swU48GGdquzijaKX12s7CVw/exec'
+
 function WaitlistCTA() {
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault()
-      if (email.trim()) {
+      if (!email.trim() || submitting) return
+
+      setSubmitting(true)
+      setError('')
+
+      try {
+        await fetch(GOOGLE_SHEETS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        })
         setSubmitted(true)
+      } catch {
+        setError('Something went wrong. Please try again.')
+      } finally {
+        setSubmitting(false)
       }
     },
-    [email]
+    [email, submitting]
   )
 
   return (
@@ -962,13 +982,17 @@ function WaitlistCTA() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="flex-1 px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-200 placeholder-zinc-600 text-sm font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
+              disabled={submitting}
+              className="flex-1 px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-200 placeholder-zinc-600 text-sm font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 disabled:opacity-50"
             />
-            <Button variant="primary" className="whitespace-nowrap">
-              Join Waitlist
+            <Button variant="primary" className={`whitespace-nowrap ${submitting ? 'opacity-70 pointer-events-none' : ''}`}>
+              {submitting ? 'Sending...' : 'Join Waitlist'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </form>
+        )}
+        {error && (
+          <p className="text-red-400 text-xs font-mono mt-3">{error}</p>
         )}
       </div>
     </section>
